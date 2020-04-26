@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="jp">
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+	<title>Simple Harmonic Motion</title>
+</head>
+
+<body onload="draw()" link="white" vlink="white">
+	<h2>鉛直ばね振り子</h2>
+	<p style="font-size:3.0em">速度　 <span id="RealtimeArea" style="color:#000000">mojimoji</span> cm/s </p>
+	<canvas id="shm" width="400" height="400"></canvas>
+	<canvas id="can" style="border: solid 1px black;"></canvas>
+
+	<script>
+
+		var k = 10;
+		var m = 100;
+		var L = 60;
+		var s = 10;
+
+		var x0 = 200; //widthの半分だとgood
+		var y0 = 10; //初期変位
+		var y = y0;
+		var v = 0;
+		var dt = 0.2;
+
+		var size = 10;
+		var width = 400; //canvasのwidthとそろえる
+		var height = 400; //canvasのheightとそろえる
+		var num = 60; //ばねの曲がる回数
+
+		var ctx;
+
+
+		/////////////////////////////////////////////////////graph用///////////////////////////////////////////////////////////////////
+		//まずは変数の定義
+		//フィールドサイズ(ポイントの個数で定義)
+		const FIELD_COL = 200; //幅
+		const FIELD_ROW = 150; //高さ
+		//ブロック一つのサイズ(ピクセル) 全体の縮尺に関係
+		const BLOCK_SIZE = 3;
+		//ブロックのみのサイズ。倍率
+		const BLOCK_times = 2;
+		//スクリーンサイズ
+		const SCREEN_W = BLOCK_SIZE * FIELD_COL; //ひとつぶん×いくつぶん (ピクセル)
+		const SCREEN_H = BLOCK_SIZE * FIELD_ROW;
+		//ポイントのサイズ
+		const TETRO_SIZE = 1; //絶対に変えない！
+		//ポイントの初期座標
+		let tetro_x = 3;
+		let tetro_y = FIELD_ROW / 2 - TETRO_SIZE; //中間から
+		//let tetro_y = FIELD_ROW  - TETRO_SIZE;    //左下から
+		//とりあえず計算用の変数
+		let tx2 = 0;
+		//描画間隔(ミリ秒)
+		const Anime_SPEED = 50;
+		//グラフ用キャンバスの描画
+		let can = document.getElementById("can");
+		let con = can.getContext("2d");
+		can.width = SCREEN_W;
+		can.height = SCREEN_H;
+		//フィールド本体
+		let field = [];
+		//フィールドのクリア
+		for (let y = 0; y < FIELD_ROW; y++) {
+			field[y] = [];
+			for (let x = 0; x < FIELD_COL; x++) {
+				field[y][x] = 0;
+			}
+		}
+		/////////////////////////////////////////////////////graph用　終わり////////////////////////////////////////////////////////////
+
+
+
+
+		function draw() {
+			var c = document.getElementById("shm");
+			if (!c.getContext) return false;
+			ctx = c.getContext("2d");
+
+			setInterval(move, Anime_SPEED);
+		}
+
+		function move() {
+			ctx.clearRect(0, 0, width, height);
+
+			var F = - k * (y - L);
+			var a = F / m;
+			v = v + a * dt;
+			y = y + v * dt;
+			var chain = (L + y) / num;
+
+			X1 = x0 + size / 2;
+			Y1 = s + chain / 2;
+
+			ctx.strokeStyle = "black";
+			ctx.lineWidth = 1;
+			ctx.beginPath();
+			ctx.moveTo(x0, 0);
+			ctx.lineTo(x0, s);
+
+			ctx.moveTo(x0, s);
+			ctx.lineTo(X1, Y1);
+			ctx.closePath();
+			ctx.stroke();
+
+			//////////////////////////////////////////////////////////////graph用///////////////////////////////////////////////
+			plotvalue = Math.floor(v * 4); //整数に丸める
+			plotvalue = Math.floor(plotvalue); //整数に丸める
+			plotvalue = -(plotvalue - 1); //0点合わせ　(必要に応じて)
+			document.getElementById("RealtimeArea").innerHTML = plotvalue; //数値を表示
+			//正負で色分けする
+			if (plotvalue > 0) {
+				document.getElementById("RealtimeArea").style.color = "#3300FF";
+				con.fillStyle = "#3300FF";
+				con.fillRect(0, 0, SCREEN_W, SCREEN_H);
+			}
+			else if (Math.abs(plotvalue) < 10) {
+				document.getElementById("RealtimeArea").style.color = "#000000";
+				con.fillStyle = "#C0C0C0";
+				con.fillRect(0, 0, SCREEN_W, SCREEN_H);
+			}
+			else {
+				document.getElementById("RealtimeArea").style.color = "#FF3300";
+				con.fillStyle = "#FF3300";
+				con.fillRect(0, 0, SCREEN_W, SCREEN_H);
+			}
+
+
+			//dropTetro(plotvalue); //plotvalueを渡す、plotvalueは、FIELD_COL/2プラスマイナスで投げること
+			/////////////////////////////////////////////////////graph用　終わり//////////////////////////////////////////
+
+			for (var i = 1; i <= num; i++) {
+				X2 = x0 - (i % 2 - 1 / 2) * size;
+				Y2 = s + (i + 1 / 2) * chain;
+
+				if (i == num) {
+					X2 = x0;
+					Y2 = Y2 - chain / 2;
+				};
+
+				ctx.lineWidth = 1;
+				ctx.strokeStyle = "black";
+				ctx.beginPath();
+				ctx.moveTo(X1, Y1);
+				ctx.lineTo(X2, Y2);
+				ctx.closePath();
+				ctx.stroke();
+
+				X1 = X2;
+				Y1 = Y2;
+			}
+			ctx.strokeStyle = "black";
+			ctx.lineWidth = 1;
+			ctx.beginPath();
+			ctx.moveTo(x0, Y2);
+			ctx.lineTo(x0, Y2 + s);
+			ctx.closePath();
+			ctx.stroke();
+
+			var X = x0;
+			var Y = Y2 + s + size;
+
+			ctx.fillStyle = "black";
+			ctx.beginPath();
+			ctx.arc(X, Y, size, 0, Math.PI * 2, true);
+			ctx.closePath();
+			ctx.fill();
+			ctx.stroke();
+		}
+
+
+		///////////////////////////////////////////////////////graph用　貼り付けるのみ////////////////////////////////////////////////
+		//ポイントを描画する
+		function drawTetro() {
+			//con.clearRect(0,0,SCREEN_W,SCREEN_H);
+			let px = (tetro_x) * BLOCK_SIZE;
+			let py = (tetro_y) * BLOCK_SIZE;
+			con.fillStyle = "slateblue";
+			con.fillRect(px, py, BLOCK_SIZE * BLOCK_times, BLOCK_SIZE * BLOCK_times);
+			//  con.strokeStyle = "lime";
+			// con.strokeRect(px, py, BLOCK_SIZE, BLOCK_SIZE);
+		}
+
+		//フィールドの描画
+		function drawField() {
+			con.clearRect(0, 0, SCREEN_W, SCREEN_H);
+
+			for (let y = 0; y < FIELD_ROW; y++) {
+				for (let x = 0; x < FIELD_COL; x++) {
+					if (field[y][x]) {
+						let px = x * BLOCK_SIZE;
+						let py = y * BLOCK_SIZE;
+						con.fillStyle = "slateblue";
+						con.fillRect(px, py, BLOCK_SIZE * BLOCK_times, BLOCK_SIZE * BLOCK_times);
+						// con.strokeStyle = "lime";
+						// con.strokeRect(px, py, BLOCK_SIZE, BLOCK_SIZE);
+					}
+				}
+			}
+		}
+
+		//ポイント描画とフィールド描画をまとめる
+		function drawAll() {
+			//drawTetroの中に、clearがある→この３つの関数の順番は大事！
+			drawField();
+			yajirusiyoko(); //横軸がいらない場合は、ここを削除すること！
+			yajirusitate();
+			drawTetro();
+		}
+
+		//ランダムな整数を戻す関数
+		function rand(min, max) {
+			return Math.floor(Math.random() * (max - min + 1)) + min;
+		}
+
+		//コマを進める
+		//tetro_x , tetro_y　が、座標を指定。
+		//tetro_xがフィールドの右端に到達すると、checkLine関数が画面スクロールを開始。
+		//tetro_xとtetro_yは、フィールド上では整数でのみ扱える。
+		//なので、Math.floorで整数に丸める。
+
+		//とりあえず古いまま残しておくが、2020.2.11以降、droptetroには変数yを渡すことにしたため、中のmath.floorに意味はないはず
+		function dropTetro(y) {
+			if (tetro_x > FIELD_COL) {
+				tetro_x = tetro_x;
+				tx2 = tx2 + 1; //tetro_xに関係なく、tx2はx座標を更新
+			} else {
+				tetro_x = tetro_x + 1;
+				tx2 = tx2 + 1; //tetro_xに関係なく、tx2はx座標を更新
+			}
+			//マイコンにリクエストを送る　→　受けた値をtetro_yに代入すればいいはず！
+			//入力されたyの値を、修正する。yは、±FIELD_ROW / 2の範囲内で入力
+			fix_y0 = FIELD_ROW / 2;
+			fix_y = -(y - fix_y0 + 1);
+			tetro_y = fix_y;
+			//tetro_y = (FIELD_ROW / 8) * Math.sin(tx2 * 0.1) + (FIELD_ROW / 8) * Math.sin(tx2 * 0.085) + (FIELD_ROW / 2) - TETRO_SIZE; //うなり
+			//tetro_y = tetro_y + rand(-1, 1) ; //ランダムウォーク表示
+			//+ (FIELD_ROW / 2) - TETRO_SIZE;  //関数で表現するときはこちら
+			tetro_y = Math.floor(tetro_y); //整数に丸める
+
+			checkLine(tetro_x);
+			fixTetro();
+			drawAll();
+		}
+
+
+		//ポイントを固定する
+		function fixTetro() {
+			field[tetro_y][tetro_x] = 1;
+		}
+
+		//みぎはしに到達したら、フィールドを右に進める
+		function checkLine(x) {
+			if (x > FIELD_COL) {
+				for (let y = 0; y < FIELD_ROW; y++) {
+					for (let x = 0; x < FIELD_COL + 5; x++) {
+						if (field[y][x] == 1) {
+							field[y][x - 1] = field[y][x];
+							field[y][x] = 0;
+						}
+
+					}
+				}
+			}
+		}
+
+
+
+
+		//横軸をかく(canvas-arrow.jsに接続)
+		function yajirusiyoko() {
+			var canvas = document.getElementById('can');
+			var context = canvas.getContext("2d");
+			context.beginPath();
+			//context.arrow(startX,startY,endX,endY,controlPoints);
+			context.arrow(0, FIELD_ROW * BLOCK_SIZE / 2, FIELD_COL * BLOCK_SIZE, FIELD_ROW * BLOCK_SIZE / 2, [0, 1, -10, 1, -10, 7]);
+			//context.arrow(0,FIELD_ROW * BLOCK_SIZE -10 , FIELD_COL * BLOCK_SIZE, FIELD_ROW * BLOCK_SIZE - 10 , [0, 2, -10, 2, -10, 7]); //正のみ
+			context.fillStyle = "black";
+			context.fill();
+
+		}
+
+		//縦軸をかく
+		function yajirusitate() {
+			var canvas = document.getElementById('can');
+			var context = canvas.getContext("2d");
+			context.beginPath();
+			//つかいかた　context.arrow(startX,startY,endX,endY,controlPoints);
+			context.arrow(10, FIELD_ROW * BLOCK_SIZE, 10, 0, [0, 1, -10, 1, -10, 7]);
+			context.fillStyle = "black";
+			context.fill();
+		}
+
+		//リクエストをマイコンに送る
+
+
+		//arrows　//詳しくはよくわからん
+		(function (target) {
+			if (!target || !target.prototype)
+				return;
+			target.prototype.arrow = function (startX, startY, endX, endY, controlPoints) {
+				var dx = endX - startX;
+				var dy = endY - startY;
+				var len = Math.sqrt(dx * dx + dy * dy);
+				var sin = dy / len;
+				var cos = dx / len;
+				var a = [];
+				a.push(0, 0);
+				for (var i = 0; i < controlPoints.length; i += 2) {
+					var x = controlPoints[i];
+					var y = controlPoints[i + 1];
+					a.push(x < 0 ? len + x : x, y);
+				}
+				a.push(len, 0);
+				for (var i = controlPoints.length; i > 0; i -= 2) {
+					var x = controlPoints[i - 2];
+					var y = controlPoints[i - 1];
+					a.push(x < 0 ? len + x : x, -y);
+				}
+				a.push(0, 0);
+				for (var i = 0; i < a.length; i += 2) {
+					var x = a[i] * cos - a[i + 1] * sin + startX;
+					var y = a[i] * sin + a[i + 1] * cos + startY;
+					if (i === 0) this.moveTo(x, y);
+					else this.lineTo(x, y);
+				}
+			};
+		})(CanvasRenderingContext2D);
+
+
+////////////////////////////////////////////////////////////graph用　終わり////////////////////////////////////////////////////////////
+	</script>
+
+
+</body>
+
+</html>
